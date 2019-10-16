@@ -10,6 +10,7 @@
   // model properties
   let thumbsOffsets = [];
   let selectedThumb = undefined;
+  let onePercentInPixels = undefined;
 
   // DOM nodes
   let bodyNodeWidth = undefined;
@@ -36,16 +37,8 @@
           multipleThumbSliderNode.clientWidth) *
         100;
       gapPercentage = [...gapPercentage, Math.round(offsetDifference)];
-
-      console.log("gapPercentage", gapPercentage);
-
       const difference =
         100 - gapPercentage.reduce((acc, currentValue) => acc + currentValue);
-
-      if (difference !== 0) {
-        gapPercentage[selectedThumb.id] =
-          gapPercentage[selectedThumb.id] + difference;
-      }
 
       dispatchGapBetweenThumbs(gapPercentage);
     }
@@ -115,16 +108,19 @@
     const { clientX } = event;
     const { id } = selectedThumb;
 
-    selectedThumb.offset =
+    const thumbPosition =
       clientX -
       multipleThumbSliderNodeOffsetToLeftWindow +
       multipleThumbSliderNode.offsetLeft -
       minimumGap;
-    thumbsOffsets[id].offset =
-      clientX -
-      multipleThumbSliderNodeOffsetToLeftWindow +
-      multipleThumbSliderNode.offsetLeft -
-      minimumGap;
+
+    const abstractPosition =
+      parseInt(thumbPosition / onePercentInPixels) * onePercentInPixels;
+
+    if (thumbPosition > abstractPosition) {
+      selectedThumb.offset = abstractPosition;
+      thumbsOffsets[id].offset = abstractPosition;
+    }
   }
 
   function close() {
@@ -137,6 +133,7 @@
     multipleThumbSliderNode = document.querySelector(".multiple-thumbs-slider");
     multipleThumbSliderNodeOffsetToLeftWindow = multipleThumbSliderNode.getBoundingClientRect()
       .left;
+    onePercentInPixels = multipleThumbSliderNode.clientWidth / 100;
 
     if (minimumGap) {
       minimumGap = (multipleThumbSliderNode.clientWidth * minimumGap) / 100;
@@ -147,12 +144,28 @@
     leftOffset = multipleThumbSliderNode.offsetLeft - minimumGap;
     let previousThumbOffset = 0;
 
-    const checkInitialGapPercentageSum = gapBetweenThumbsInPercent.reduce(
+    let checkInitialGapPercentageSum = gapBetweenThumbsInPercent.reduce(
       (acc, currentValue) => acc + currentValue
     );
 
-    if (checkInitialGapPercentageSum !== 100) {
-      return;
+    let i = 0;
+    while (checkInitialGapPercentageSum !== 100) {
+      if (checkInitialGapPercentageSum > 100) {
+        if (gapBetweenThumbsInPercent[i] > 2) {
+          gapBetweenThumbsInPercent[i]--;
+        }
+      } else if (checkInitialGapPercentageSum < 100) {
+        gapBetweenThumbsInPercent[i]++;
+      }
+
+      checkInitialGapPercentageSum = gapBetweenThumbsInPercent.reduce(
+        (acc, currentValue) => acc + currentValue
+      );
+      if (i === gapBetweenThumbsInPercent.length - 1) {
+        i = 0;
+      } else {
+        i++;
+      }
     }
 
     gapBetweenThumbsInPercent
